@@ -1,15 +1,11 @@
--- Data Cleaning
+-- Data Cleaning Project with World Layoffs Data 
 
 SELECT *
 FROM layoffs;
 
--- 1. Remove Duplicates
--- 2. Standardize the Data
--- 3. Null Values or Blank Values
--- 4. Remove Any Columns or Rows
+-- 1. Removing Duplicates
 
-
--- Remove Duplicates
+-- Creating a working table 
 
 CREATE TABLE layoffs_staging
 LIKE layoffs;
@@ -17,11 +13,12 @@ LIKE layoffs;
 SELECT *
 FROM layoffs_staging;
 
-
 INSERT layoffs_staging
 SELECT *
 FROM layoffs;
 
+
+-- Finding Duplicates
 
 SELECT *,
 ROW_NUMBER() OVER(
@@ -39,11 +36,12 @@ SELECT *
 FROM duplicate_cte
 WHERE row_num > 1;
 
-
 SELECT *
 FROM layoffs_staging
 WHERE company = 'Casper';
 
+
+-- Creating new table
 
 CREATE TABLE `layoffs_staging2` (
   `company` text,
@@ -58,11 +56,6 @@ CREATE TABLE `layoffs_staging2` (
   `row_num` int
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-
-SELECT *
-FROM layoffs_staging2;
-
-
 INSERT INTO layoffs_staging2
 SELECT *,
 ROW_NUMBER() OVER(
@@ -70,85 +63,81 @@ PARTITION BY company, location, industry, total_laid_off, percentage_laid_off, `
 FROM layoffs_staging;
 
 
+-- Removing Duplicates
+
 DELETE
 FROM layoffs_staging2
 WHERE row_num > 1;
-
 
 SELECT * 
 FROM layoffs_staging2;
 
 
+-- 2. Standardizing Data
 
--- Standardizing Data
-
+-- Trimming Data
 
 SELECT company, TRIM(company)
 FROM layoffs_staging2;
-
 
 UPDATE layoffs_staging2
 SET company = TRIM(company);
 
 
-SELECT DISTINCT industry
-FROM layoffs_staging2
-;
+-- Standardizing Industry Names
 
+SELECT DISTINCT industry
+FROM layoffs_staging2;
 
 UPDATE layoffs_staging2
 SET industry = 'Crypto'
 WHERE industry LIKE 'Crypto%';
 
-
 SELECT *
 FROM layoffs_staging2;
 
 
+-- Standardizing Country Names
+
 SELECT DISTINCT country, TRIM(TRAILING '.' FROM country)
 FROM layoffs_staging2
 ORDER BY 1;
-
 
 UPDATE layoffs_staging2
 SET country = TRIM(TRAILING '.' FROM country)
 WHERE country LIKE 'United States%';
 
 
+-- Standardizing Data
+
 SELECT `date`,
 STR_TO_DATE(`date`, '%m/%d/%Y')
 FROM layoffs_staging2;
 
-
 UPDATE layoffs_staging2
 SET `date` = STR_TO_DATE(`date`, '%m/%d/%Y');
 
-
 SELECT `date`
 FROM layoffs_staging2;
-
 
 ALTER TABLE layoffs_staging2
 MODIFY COLUMN `date` DATE;
 
 
-SELECT * 
-FROM layoffs_staging2;
+-- 3. Null Values or Blank Values
 
-
--- Null Values or Blank Values
-
+-- Looking for Null or Blank Values
 
 SELECT *
 FROM layoffs_staging2
 WHERE industry IS NULL 
 OR industry = '';
 
-
 SELECT *
 FROM layoffs_staging2
 WHERE company = 'Airbnb';
 
+-- Complete Blank Values where possible
 
 SELECT *
 FROM layoffs_staging2 t1
@@ -158,7 +147,6 @@ JOIN layoffs_staging2 t2
 WHERE (t1.industry IS NULL OR t1.industry = '')
 AND t2.industry IS NOT NULL AND t2.industry != '';
 
-
 UPDATE layoffs_staging2 t1
 JOIN layoffs_staging2 t2
 	ON t1.company = t2.company
@@ -167,13 +155,14 @@ WHERE (t1.industry IS NULL OR t1.industry = '')
 AND t2.industry IS NOT NULL AND t2.industry != '';
 
 
--- Remove Any Columns or Rows
+-- 4. Remove Any Columns or Rows
+
+-- Removing Rows with Blank Layoffs Values
 
 SELECT * 
 FROM layoffs_staging2
 WHERE total_laid_off IS NULL
 AND percentage_laid_off IS NULL;
-
 
 DELETE
 FROM layoffs_staging2
@@ -181,10 +170,7 @@ WHERE total_laid_off IS NULL
 AND percentage_laid_off IS NULL;
 
 
+-- Removing unnecessary Column
+
 ALTER TABLE layoffs_staging2
 DROP COLUMN row_num;
-
-
-
-
-
